@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PGVCL Bill Calculator — FY 2026-27</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div class="tariff-pill">PGVCL &middot; GERC Tariff &middot; w.e.f. 01-April-2026 &middot; FY 2026-27</div>
+    <h1>PGVCL Bill Calculator</h1>
+    <p class="sub">Reference tool only &mdash; not for official billing &middot; Author: B. H. Babariya, Dhoraji Division</p>
+    <nav class="nav-links">
+      <a class="nav-link active" href="index.html"><i data-lucide="calculator" style="width:11px"></i> Calculator</a>
+      <a class="nav-link" href="tariff-details.html"><i data-lucide="book-open" style="width:11px"></i> Tariff Details</a>
+    </nav>
+  </header>
+
+  <div class="grid">
+    <div class="card form-section">
+      <div class="sec-head-form">
+        <span class="icon-chip"><i data-lucide="settings-2" style="width:13px;height:13px;stroke-width:2.5"></i></span>
+        Usage Parameters
+      </div>
+
+      <!-- Banners -->
+      <div id="warn-ag-hp"  class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>AG HP-Based — Unmetered</strong>Bill = HP × ₹200 × months. ED and FCA exempt. No energy reading needed.</div></div>
+      <div id="warn-tatkal" class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>AG Tatkal</strong>Energy at 80p/unit. Eligible for normal rate after 5 years.</div></div>
+      <div id="warn-tmp"    class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>TMP — Temporary Supply</strong>Fixed ₹15/kW/day. Payment within 7 days. Max 6 months.</div></div>
+      <div id="warn-ltmd"   class="banner banner-info"  style="display:none"><i data-lucide="info"           style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>LTMD</strong>Enter: Contract Demand (kW), Max Demand (kW), Active Energy (kWh), Reactive Energy (kVARh).</div></div>
+      <div id="warn-ht"     class="banner banner-info"  style="display:none"><i data-lucide="info"           style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>HT Category</strong>Enter: Contract Demand (kVA), Max Demand (kVA), kWh, and kVAh (for Power Factor calculation).</div></div>
+      <div id="warn-smart-offpeak" class="banner banner-info" style="display:none"><i data-lucide="zap" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>Smart Meter Off-Peak Discount</strong>Enter off-peak units (T3) below to apply the applicable concession per the tariff.</div></div>
+
+      <!-- Category -->
+      <div class="fg">
+        <label>Consumer Category</label>
+        <select id="category" onchange="initCalc()">
+          <optgroup label="── Residential (LT) ──">
+            <option value="rgp_u">RGP — Urban</option>
+            <option value="rgp_r">RGP — Rural (Gram Panchayat)</option>
+            <option value="rgp_u_bpl">RGP Urban — BPL (Concessional)</option>
+            <option value="rgp_r_bpl">RGP Rural — BPL (Concessional)</option>
+          </optgroup>
+          <optgroup label="── Commercial / Industrial (LT) ──">
+            <option value="nrgp">Non-RGP (NRGP) — up to 40 kW</option>
+            <option value="ltmd">LTMD — above 40 kW (Max Demand)</option>
+            <option value="glp">GLP — Street Light / Charity / Educational</option>
+            <option value="tmp">TMP — Temporary LT Supply</option>
+          </optgroup>
+          <optgroup label="── Water Works (LT) ──">
+            <option value="wwgp">WWSP Type III — Gram / Nagar Panchayat</option>
+            <option value="wwlt2">WWSP Type II — Local Authority / Municipal</option>
+            <option value="wwpr">WWSP Type I — Other Authority</option>
+          </optgroup>
+          <optgroup label="── Agriculture (LT) ──">
+            <option value="ag_hp">AG — HP Based (₹200/HP/month, unmetered)</option>
+            <option value="ag_metered">AG — Metered (₹20/HP fixed + 60p/unit)</option>
+            <option value="ag_tatkal">AG — Tatkal (₹20/HP fixed + 80p/unit)</option>
+            <option value="ltp_li">LTP — Lift Irrigation (₹20/HP fixed + 80p/unit)</option>
+          </optgroup>
+          <optgroup label="── High Tension (HT) — ≥100 kVA ──">
+            <option value="htp_1">HTP-I — General HT</option>
+            <option value="htp_2">HTP-II — HT Water Works</option>
+            <option value="htp_3">HTP-III — Temporary HT</option>
+            <option value="htp_4">HTP-IV — Night Only HT (22:00–06:00)</option>
+            <option value="htp_5">HTP-V — HT Lift Irrigation</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div id="cat-desc" class="cat-desc"><i data-lucide="info" style="width:11px;flex-shrink:0"></i><span>Urban residential consumers</span></div>
+
+      <div class="fg">
+        <label>Meter Type</label>
+        <select id="meter_type" onchange="initCalc()">
+          <option value="normal">Normal Meter (Post-paid — standard rates)</option>
+          <option value="smart_postpaid">Smart Meter — Post-paid (same unit rates)</option>
+          <option value="smart_prepaid">Smart Meter — Pre-paid (concessional rates)</option>
+        </select>
+      </div>
+
+      <hr class="sep">
+      <div class="field-section-label">Supply &amp; Demand</div>
+
+      <div class="row2-auto">
+        <div class="fg">
+          <label id="load-label">Connected Load (kW)</label>
+          <input type="number" id="cl" value="5" min="0" step="0.5" oninput="runCalc()">
+        </div>
+        <div class="fg">
+          <label>Billing Period (Days)</label>
+          <input type="number" id="days" value="30" min="1" max="92" oninput="runCalc()">
+        </div>
+      </div>
+
+      <div class="fg demand-field" id="md-row" style="display:none">
+        <label id="md-label">Max Demand Recorded (kW)</label>
+        <input type="number" id="md" value="0" min="0" step="0.5" oninput="runCalc()">
+        <div class="field-hint">Actual maximum demand recorded by meter this billing period</div>
+      </div>
+
+      <hr class="sep">
+      <div class="field-section-label">Energy Readings</div>
+
+      <div class="fg" id="kwh-row">
+        <label id="kwh-label">Active Energy (kWh)</label>
+        <input type="number" id="kwh" value="200" min="0" oninput="runCalc()">
+      </div>
+
+      <div class="fg ht-field" id="kvah-row" style="display:none">
+        <label id="kvah-label">Apparent Energy kVAh (PF calc)</label>
+        <input type="number" id="kvah" value="0" min="0" oninput="runCalc()">
+        <div class="field-hint">From meter — PF = kWh ÷ kVAh</div>
+      </div>
+
+      <div class="fg ltmd-field" id="kvarh-row" style="display:none">
+        <label>Reactive Energy (kVARh)</label>
+        <input type="number" id="kvarh" value="0" min="0" oninput="runCalc()">
+        <div class="field-hint">Charged at ₹0.10/kVARh for LTMD consumers</div>
+      </div>
+
+      <hr class="sep">
+
+      <!-- TOU row — shown for HT/LTMD/NRGP (peak+offpeak) and smart-meter RGP/GLP/WWSP (offpeak only) -->
+      <div id="tou-row" style="display:none">
+        <div id="t1-field" class="fg">
+          <label>Peak Units T1 (07:00–11:00 &amp; 18:00–22:00 hrs)</label>
+          <input type="number" id="t1" value="0" min="0" oninput="runCalc()">
+        </div>
+        <div class="fg">
+          <label id="t3-label">Off-Peak Units T3 (11:00–17:00 hrs)</label>
+          <input type="number" id="t3" value="0" min="0" oninput="runCalc()">
+          <div class="field-hint">Off-peak discount applied per tariff order</div>
+        </div>
+      </div>
+
+      <div class="fg" id="voltage-row" style="display:none">
+        <label>Supply Voltage Level (for energy rebate)</label>
+        <select id="voltage" onchange="runCalc()">
+          <option value="11">11 kV / 22 kV — 1.0% energy rebate (HV)</option>
+          <option value="66">33 kV / 66 kV — 1.5% energy rebate (EHV)</option>
+          <option value="132">132 kV and above — 2.0% energy rebate (EHV)</option>
+        </select>
+      </div>
+
+      <hr class="sep">
+      <div class="field-section-label">Levies</div>
+      <div class="row2">
+        <div class="fg">
+          <label>Electricity Duty Rate (%)</label>
+          <input type="number" id="ed_rate" value="15" min="0" max="100" step="0.5" oninput="runCalc()">
+        </div>
+        <div class="fg">
+          <label>FPPPA / FCA Rate (₹/kWh)</label>
+          <input type="number" id="fca_rate" value="2.30" min="0" step="0.01" oninput="runCalc()">
+        </div>
+      </div>
+
+      <div class="cb-row">
+        <label class="cb-label" for="skip_fixed">
+          <input type="checkbox" id="skip_fixed" onchange="runCalc()">
+          <span>Skip Fixed / Demand<small>Exclude from calculation</small></span>
+        </label>
+      </div>
+
+      <div class="pf-ref" id="pf-ref-card" style="display:none">
+        <h4><i data-lucide="info" style="width:11px"></i>&nbsp;PF Adjustment Reference (HT)</h4>
+        <table class="pf-table">
+          <thead><tr><th>Average PF (kWh ÷ kVAh)</th><th>Adjustment on Energy Charges</th></tr></thead>
+          <tbody>
+            <tr><td>&gt; 0.95</td><td class="rebate">Rebate: −0.5% per 0.01 above 0.95 (max −2.5%)</td></tr>
+            <tr><td>0.90 – 0.95</td><td class="neutral">No adjustment (neutral band)</td></tr>
+            <tr><td>0.85 – 0.899</td><td class="penalty">Penalty: +1.0% per 0.01 below 0.90</td></tr>
+            <tr><td>&lt; 0.85</td><td class="penalty">Penalty: +5% (0.85–0.90) + 2% per 0.01 below 0.85</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.59rem;color:var(--slate-500);margin-top:0.4rem">Average PF = kWh ÷ kVAh. Enter kVAh above to activate. If kVAh is 0, PF assumed = 1.0.</p>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="resetForm()"><i data-lucide="refresh-cw" style="width:13px"></i> Reset</button>
+        <button class="btn btn-primary" onclick="window.print()"><i data-lucide="printer" style="width:13px"></i> Print Bill</button>
+      </div>
+    </div>
+
+    <div class="sticky">
+      <div class="total-card">
+        <div class="total-eyebrow">Total Bill Amount (incl. Electricity Duty)</div>
+        <div class="total-amount"><span class="sym">₹</span><span id="disp-grand">0.00</span></div>
+        <div class="total-breakdown">
+          <span class="total-chip">Board: ₹<span id="disp-board">0.00</span></span>
+          <span class="total-chip">ED: ₹<span id="disp-ed">0.00</span></span>
+        </div>
+        <div class="tariff-line">GERC Tariff Order w.e.f. 01-April-2026 &middot; FY 2026-27</div>
+      </div>
+      <div class="manifest-card">
+        <div class="manifest-head"><i data-lucide="file-text" style="width:13px"></i> Charge Manifest</div>
+        <div id="manifest-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>PGVCL Bill Calculator &middot; FY 2026-27 &middot; GERC Tariff effective 01-April-2026</p>
+    <p>Author: B. H. Babariya &middot; Dhoraji Division &middot; For internal reference only &middot; Not for official billing</p>
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script src="calc.js"></script>
+</body>
+</html>

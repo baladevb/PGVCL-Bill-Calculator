@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PGVCL Tariff Details — FY 2026-27</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div class="tariff-pill">PGVCL &middot; GERC Tariff &middot; w.e.f. 01-April-2026 &middot; FY 2026-27</div>
+    <h1>Tariff Details</h1>
+    <p class="sub">All rates auto-generated from config.js &middot; Author: B. H. Babariya, Dhoraji Division</p>
+    <nav class="nav-links">
+      <a class="nav-link" href="index.html"><i data-lucide="calculator" style="width:11px"></i> Calculator</a>
+      <a class="nav-link active" href="tariff-details.html"><i data-lucide="book-open" style="width:11px"></i> Tariff Details</a>
+    </nav>
+  </header>
+
+  <div class="details-grid">
+    <div class="sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-head">All Categories</div>
+        <div id="sidebar-nav"></div>
+      </div>
+    </div>
+    <div id="details-content"></div>
+  </div>
+
+  <footer class="site-footer">
+    <p>PGVCL Tariff Details &middot; FY 2026-27 &middot; GERC Tariff Order effective 01-April-2026</p>
+    <p>Author: B. H. Babariya &middot; Dhoraji Division &middot; For internal reference only</p>
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ── HELPERS ────────────────────────────────────────────────────────────
+const p = (v) => `₹${v.toFixed(2)}`;
+const paise = (v) => `${(v*100).toFixed(0)} Paise = ${p(v)}/unit`;
+
+function rt(rows, heads=[]) {
+  const hd = heads.length ? `<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>` : '';
+  const bd = rows.map((r,i) => `<tr${i%2?' class="row-alt"':''}>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+  return `<table class="rate-table">${hd}<tbody>${bd}</tbody></table>`;
+}
+function section(icon, iconClass, title, body) {
+  return `<div class="charge-section">
+    <div class="cs-head"><div class="cs-icon ${iconClass}"><i data-lucide="${icon}" style="width:12px"></i></div><span class="cs-title">${title}</span></div>
+    <div class="cs-body">${body}</div>
+  </div>`;
+}
+function na(text) { return `<div class="na-block"><i data-lucide="minus-circle" style="width:13px"></i><span><strong>Not Applicable</strong> — ${text}</span></div>`; }
+function formula(label, content) { return `<div class="formula-box"><div class="fl">${label}</div>${content}</div>`; }
+function note(text) { return `<div class="note-box">${text}</div>`; }
+function badge(text, cls) { return `<span class="badge badge-${cls}">${text}</span>`; }
+
+// ── SECTION BUILDERS ───────────────────────────────────────────────────
+
+function buildFixed(cat) {
+  const ft = cat.fixed_type;
+  switch(ft) {
+    case 'bracket_kw': {
+      const rows = cat.fixed.map(([lim,r]) => [
+        lim===Infinity ? `Above ${cat.fixed[cat.fixed.indexOf(cat.fixed.find(f=>f[1]===r))-1]?.[0]||6} kW` : `Up to ${lim} kW`,
+        `${badge('₹'+r+' / month','blue')}`
+      ]);
+      return rt(rows, ['Connected Load','Fixed Charge / Month']);
+    }
+    case 'flat':
+      return rt([['All loads', badge('₹'+cat.fixed_amount+' / month','green')]], ['','Rate']);
+    case 'none':
+      return na('No fixed charge for WWSP Type III (GP areas)');
+    case 'per_hp':
+      return rt([['Per HP of connected load', badge('₹'+cat.fixed_rate_per_hp+' / HP / month','blue')]]);
+    case 'hp_monthly_flat':
+      return rt([['Per HP (entire bill basis)', badge('₹'+cat.hp_monthly_rate+' / HP / month','blue')]]) + note('Entire bill = HP × ₹'+cat.hp_monthly_rate+' × months. No separate energy component.');
+    case 'per_kw_per_day':
+      return rt([['Per kW per day', badge('₹'+cat.fixed_rate_per_kw_day+' / kW / day','blue')]]);
+    case 'tiered_kw': {
+      let prev=0;
+      const rows = cat.fixed_tiers.map(([lim,r]) => {
+        const label = `${prev}–${lim===Infinity?'∞':lim} kW`;
+        const row = [label, badge('₹'+r+' / kW / month','blue')];
+        prev=lim; return row;
+      });
+      return rt(rows, ['Load Range','Rate per kW / month']);
+    }
+    case 'demand_kw': {
+      const tRows = cat.demand_tiers.map(([lim,r],i,arr) => {
+        const prev = i===0?0:arr[i-1][0];
+        return [`${prev}–${lim===Infinity?'∞':lim} kW`, badge('₹'+r+' / kW / month','blue')];
+      });
+      const exRow = [['MD above Contract Demand', badge('₹'+cat.demand_excess_rate+' / kW / month','red')]];
+      return formula('Billing Demand', `max(Actual MD, ${cat.demand_floor_pct}% of CD, ${cat.demand_floor_abs} kW)`)
+        + rt(tRows, ['Billing Demand Band','Demand Rate'])
+        + rt(exRow, ['Excess Demand','Penalty']);
+    }
+    case 'demand_kva': {
+      const tRows = cat.demand_tiers.map(([lim,r],i,arr) => {
+        const prev = i===0?0:arr[i-1][0];
+        return [`${prev===0?'First ':prev+' – '}${lim===Infinity?'Above '+(arr[i-1]?.[0]||0)+' kVA':lim+' kVA'}`, badge('₹'+r+' / kVA / month','blue')];
+      });
+      let extras = '';
+      if (cat.demand_excess_rate) extras = rt([['MD above Contract Demand', badge('₹'+cat.demand_excess_rate+' / kVA / month','red')]], ['Excess Demand','Penalty']);
+      return formula('Billing Demand', `max(Actual MD, ${cat.demand_floor_pct}% of CD, ${cat.demand_floor_abs} kVA)`)
+        + rt(tRows, ['Billing Demand Band','Rate per kVA / month']) + extras;
+    }
+    case 'demand_kva_daily':
+      return formula('Billing Demand', `max(Actual MD, ${cat.demand_floor_pct}% of CD, ${cat.demand_floor_abs} kVA)`)
+        + rt([['Within Contract Demand',badge('₹'+cat.demand_rate_per_day+' / kVA / day','blue')],['Excess above Contract Demand',badge('₹'+cat.demand_excess_rate_per_day+' / kVA / day','red')]], ['Demand','Rate']);
+    case 'demand_kva_fraction_htp1':
+      return formula('Rate Applied', '1/3 × applicable HTP-I demand tier rate')
+        + rt([
+          ['First 500 kVA','₹150 HTP-I → ₹50.00 / kVA / month'],
+          ['500–1000 kVA','₹260 HTP-I → ₹86.67 / kVA / month'],
+          ['Above 1000 kVA','₹475 HTP-I → ₹158.33 / kVA / month'],
+          ['Excess demand','₹'+cat.demand_excess_rate+' / kVA / month (penalty)']
+        ], ['Billing Demand','HTP-IV Rate (÷3)']);
+    default: return na('Not applicable');
+  }
+}
+
+function buildEnergy(cat) {
+  if (cat.energy_type === 'none') return na('Unmetered tariff — no energy component');
+  const hasPrepaid = cat.energy_prepaid;
+
+  switch(cat.energy_type) {
+    case 'slab': {
+      const heads = hasPrepaid ? ['Monthly Slab','Post-paid / Smart Post-paid','Smart Pre-paid'] : ['Monthly Slab','Energy Rate'];
+      let prev=0;
+      const rows = cat.energy.map(([lim,r],i) => {
+        const label = lim===Infinity ? `Above ${prev} units` : (prev===0?'First '+lim+' units':'Next '+(lim-prev)+' units ('+prev+'–'+lim+')');
+        const row = [label, badge((r*100).toFixed(0)+'p = ₹'+r.toFixed(2)+'/unit','blue')];
+        if (hasPrepaid) { const pr=cat.energy_prepaid[i]?.[1]||r; row.push(badge((pr*100).toFixed(0)+'p = ₹'+pr.toFixed(2)+'/unit','green')); }
+        prev = lim===Infinity?prev:lim; return row;
+      });
+      return rt(rows, heads);
+    }
+    case 'flat': {
+      const r=cat.energy[0][1], pr=hasPrepaid?cat.energy_prepaid[0][1]:null;
+      if (pr && pr!==r) return rt([['All consumption',badge((r*100).toFixed(0)+'p = ₹'+r.toFixed(2)+'/unit','blue'),badge((pr*100).toFixed(0)+'p = ₹'+pr.toFixed(2)+'/unit','green')]], ['','Post-paid','Pre-paid']);
+      return rt([['All consumption', badge((r*100).toFixed(0)+'p = ₹'+r.toFixed(2)+'/unit','blue')]]);
+    }
+    case 'flat_by_cl': {
+      const heads = hasPrepaid ? ['Contract Load','Post-paid','Pre-paid'] : ['Contract Load','Rate'];
+      const rows = cat.energy.map(([lim,r],i) => {
+        const label = lim===Infinity ? `Above ${cat.energy[i-1]?.[0]||10} kW` : `Up to ${lim} kW`;
+        const row = [label, badge((r*100).toFixed(0)+'p = ₹'+r.toFixed(2)+'/unit','blue')];
+        if (hasPrepaid) { const pr=cat.energy_prepaid[i]?.[1]||r; row.push(badge((pr*100).toFixed(0)+'p = ₹'+pr.toFixed(2)+'/unit','green')); }
+        return row;
+      });
+      return rt(rows, heads);
+    }
+    case 'flat_by_bd': {
+      const heads = ['Billing Demand Tier','Energy Rate'];
+      let prev=0;
+      const rows = cat.energy.map(([lim,r]) => {
+        const label = lim===Infinity ? `BD above ${prev} kVA` : `BD ${prev}–${lim} kVA`;
+        const row = [label, badge((r*100).toFixed(0)+'p = ₹'+r.toFixed(2)+'/unit','blue')];
+        prev=lim; return row;
+      });
+      return rt(rows, heads) + note('Smart pre-paid tariff not specified for HT categories.');
+    }
+    default: return '';
+  }
+}
+
+function buildTOU(cat) {
+  const hasPeak     = cat.tou && cat.tou_peak_rate || cat.tou_peak_tiered;
+  const hasOffpeak  = cat.tou_offpeak_rate || cat.tou_offpeak_smart_rate;
+  const hours       = cat.tou_offpeak_smart_hours || '11:00–17:00';
+
+  if (!cat.tou && !cat.tou_offpeak_smart) return na('TOU not applicable for this category');
+  if (cat.id === 'htp_4') return na('HTP-IV operates in off-peak hours only — no TOU differentiation needed');
+
+  let html = '';
+
+  // Peak surcharge
+  if (cat.tou && cat.tou_min_cl > 0) {
+    html += `<p style="font-size:0.68rem;margin-bottom:0.4rem">Peak surcharge applies only when Contract Load &gt; ${cat.tou_min_cl} kW.</p>`;
+  }
+  if (cat.tou_peak_tiered) {
+    html += rt(cat.tou_peak_tiered.map(([lim,r],i,arr)=>[
+      lim===Infinity ? `BD above ${arr[i-1]?.[0]||500} kVA` : `BD up to ${lim} kVA`,
+      badge('+₹'+r.toFixed(2)+'/unit (peak surcharge)','red')
+    ]), ['Billing Demand','Peak T1 Rate (07:00–11:00 & 18:00–22:00)']);
+  } else if (cat.tou && cat.tou_peak_rate) {
+    html += rt([['Peak period (07:00–11:00 & 18:00–22:00)', badge('+₹'+cat.tou_peak_rate.toFixed(2)+'/unit surcharge','red')]]);
+  }
+
+  // Off-peak discount
+  const opRate = cat.tou_offpeak_rate || cat.tou_offpeak_smart_rate;
+  if (opRate) {
+    const smartOnly = !cat.tou && cat.tou_offpeak_smart;
+    html += rt([[`Off-peak (${hours})` + (smartOnly ? ' — Smart / ToD meter only' : ''), badge('−₹'+Math.abs(opRate).toFixed(2)+'/unit rebate','green')]]);
+    if (smartOnly) html += note('This discount applies only to consumers with Smart Meter or meter with ToD recording facility, per Tariff §§1.4, 2.4, 3.1, 7.4.');
+  }
+  return html || na('No TOU data');
+}
+
+function buildPF(cat) {
+  if (!cat.pf_adj) return na('PF adjustment applicable to HT consumers only');
+  return formula('Average PF Calculation','PF = Total kWh ÷ Total kVAh for the billing period') +
+    rt([
+      ['Above 0.95', badge('−0.5% per 0.01 above 0.95 (max −2.5%)','green')],
+      ['0.90 – 0.95', 'No adjustment (neutral band)'],
+      ['0.85 – 0.899', badge('+1.0% per 0.01 below 0.90','red')],
+      ['Below 0.85', badge('+5% (0.85–0.90) + 2% per 0.01 below 0.85','red')]
+    ], ['Average PF','Adjustment on Energy Charges']);
+}
+
+function buildVoltage(cat) {
+  if (!cat.voltage_rebate) return na('Voltage rebate applies to HT consumers only');
+  return rt(Object.entries(cat.voltage_rebates).map(([kv,r])=>[
+    kv==='11'?'11 kV / 22 kV (HV)':kv==='66'?'33 kV / 66 kV (EHV)':'132 kV and above (EHV)',
+    badge('−'+(r*100).toFixed(1)+'% on energy amount','green')
+  ]), ['Supply Voltage','Rebate on Energy Charges']);
+}
+
+function buildReactive(cat, id) {
+  if (id !== 'ltmd') return na('Reactive energy (kVARh) billing applies to LTMD only');
+  return rt([['All reactive units (kVARh)', badge('₹'+cat.reactive_energy_rate.toFixed(2)+' / kVARh','blue')]]);
+}
+
+function buildFCA(cat) {
+  if (!cat.fca) return na('Agriculture / HTP-V: FCA exempt');
+  if (cat.energy_type === 'none') return na('Unmetered tariff: no kWh base for FCA');
+  return rt([['FPPPA / FCA','As notified monthly (indicative: ₹2.30/unit)','Per kWh consumed']], ['Charge','Rate','Basis']);
+}
+
+function buildED(cat) {
+  if (cat.ed_pct === 0) return na('Agriculture categories are exempt from Electricity Duty');
+  return rt([[badge(cat.ed_pct+'%','blue'), 'Total Board Charge (all components except ED itself)']], ['ED Rate','Applied On']);
+}
+
+// ── HEADER COLOURS BY GROUP ──────────────────────────────────────────
+const headerBg = {
+  'LT Residential':  'linear-gradient(135deg,#1e3a8a,#2563eb)',
+  'LT Commercial':   'linear-gradient(135deg,#1e3a5a,#0369a1)',
+  'LT Water Works':  'linear-gradient(135deg,#164e63,#0891b2)',
+  'LT Agriculture':  'linear-gradient(135deg,#14532d,#15803d)',
+  'HT General':      'linear-gradient(135deg,#1e1b4b,#3730a3)',
+  'HT Agriculture':  'linear-gradient(135deg,#14532d,#15803d)',
+};
+const tagMap = {
+  'LT Residential': ['<span class="tag tag-lt">LT</span>'],
+  'LT Commercial':  ['<span class="tag tag-lt">LT</span>'],
+  'LT Water Works': ['<span class="tag tag-lt">LT</span>'],
+  'LT Agriculture': ['<span class="tag tag-ag">Agriculture</span>'],
+  'HT General':     ['<span class="tag tag-ht">HT</span>'],
+  'HT Agriculture': ['<span class="tag tag-ag">Agriculture</span>','<span class="tag tag-ht">HT</span>'],
+};
+
+function buildCard(id, cat) {
+  const catRow = CATEGORIES.find(r=>r[0]===id);
+  const group  = catRow?.[1] || cat.group;
+  const desc   = catRow?.[3] || '';
+  const bg     = headerBg[group] || 'linear-gradient(135deg,#1e3a8a,#2563eb)';
+  const tags   = (tagMap[group]||[]).join('');
+  const edTag  = cat.ed_pct===0 ? '<span class="tag tag-noed">ED Exempt</span>' : `<span class="tag tag-ed">ED ${cat.ed_pct}%</span>`;
+  const fcaTag = cat.fca ? '<span class="tag tag-fca">FCA Applicable</span>' : '<span class="tag tag-nofca">FCA Exempt</span>';
+
+  const isWW = ['wwgp','wwlt2','wwpr'].includes(id);
+
+  return `<div class="cat-card" id="${id}">
+    <div class="cat-header" style="background:${bg}">
+      <div class="cat-header-top"><div>
+        <div class="cat-name">${cat.name}</div>
+        <div class="cat-desc-text">${desc}</div>
+      </div></div>
+      <div class="cat-tags">${tags}${edTag}${fcaTag}</div>
+    </div>
+    <div class="charge-sections">
+      ${section('anchor','cs-icon-blue','Fixed / Demand Charges', buildFixed(cat))}
+      ${section('zap','cs-icon-blue','Energy Charges', buildEnergy(cat))}
+      ${isWW ? section('minus-circle','cs-icon-slate','Reactive Energy / PF Adjustment', na('Not applicable for water works LT categories')) : section('activity','cs-icon-slate','Reactive Energy Charges', buildReactive(cat, id))}
+      ${section('activity','cs-icon-green','Power Factor (PF) Adjustment', buildPF(cat))}
+      ${section('trending-down','cs-icon-green','Voltage Rebate', buildVoltage(cat))}
+      ${section('clock','cs-icon-green','Time of Use (TOU)', buildTOU({...cat, id}))}
+      ${section('fuel','cs-icon-amber','FPPPA / FCA', buildFCA(cat))}
+      ${section('percent','cs-icon-red','Electricity Duty (ED)', buildED(cat))}
+      ${cat.notes ? `<div style="padding:0.5rem 1.1rem 0.7rem">${note(cat.notes)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── BUILD SIDEBAR AND CONTENT ─────────────────────────────────────────
+function buildPage() {
+  // Group categories
+  const groups = {};
+  CATEGORIES.forEach(([id,,, ]) => {
+    const catRow = CATEGORIES.find(r=>r[0]===id);
+    const group  = catRow?.[1] || 'Other';
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(id);
+  });
+
+  // Sidebar
+  let sidebarHTML = '';
+  for (const [group, ids] of Object.entries(groups)) {
+    sidebarHTML += `<div class="sidebar-group"><div class="sidebar-group-label">${group}</div>`;
+    ids.forEach(id => {
+      const cat = CONFIG[id];
+      sidebarHTML += `<a class="sidebar-link" href="#${id}">${cat?.name||id}</a>`;
+    });
+    sidebarHTML += `</div>`;
+  }
+  document.getElementById('sidebar-nav').innerHTML = sidebarHTML;
+
+  // Content cards
+  let contentHTML = '';
+  CATEGORIES.forEach(([id]) => {
+    const cat = CONFIG[id];
+    if (cat) contentHTML += buildCard(id, cat);
+  });
+  document.getElementById('details-content').innerHTML = contentHTML;
+
+  // Sidebar scroll highlight
+  const links = document.querySelectorAll('.sidebar-link');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.sidebar-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -75% 0px' });
+  document.querySelectorAll('.cat-card[id]').forEach(el => observer.observe(el));
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+document.addEventListener('DOMContentLoaded', buildPage);
+</script>
+</body>
+</html>
