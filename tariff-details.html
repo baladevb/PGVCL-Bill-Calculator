@@ -6,7 +6,7 @@
   <title>PGVCL Tariff Details — FY 2026-27</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4.2">
 </head>
 <body>
 <div class="wrap">
@@ -37,7 +37,7 @@
   </footer>
 </div>
 
-<script src="config.js"></script>
+<script src="config.js?v=4.2"></script>
 <script>
 // ── HELPERS ────────────────────────────────────────────────────────────
 const p = (v) => `₹${v.toFixed(2)}`;
@@ -209,10 +209,10 @@ function buildPF(cat) {
   if (!cat.pf_adj) return na('PF adjustment applicable to HT consumers only');
   return formula('Average PF Calculation','PF = Total kWh ÷ Total kVAh for the billing period') +
     rt([
-      ['Above 0.95', badge('−0.5% per 0.01 above 0.95 (max −2.5%)','green')],
+      ['Above 0.95', badge('−0.5% per 1% (or part) above 95% (max −2.5%)','green')],
       ['0.90 – 0.95', 'No adjustment (neutral band)'],
-      ['0.85 – 0.899', badge('+1.0% per 0.01 below 0.90','red')],
-      ['Below 0.85', badge('+5% (0.85–0.90) + 2% per 0.01 below 0.85','red')]
+      ['0.85 – 0.899', badge('+1% per 1% (or part) below 90%','red')],
+      ['Below 0.85', badge('+5% (down to 85%) + 2% per 1% (or part) below 85%','red')]
     ], ['Average PF','Adjustment on Energy Charges']);
 }
 
@@ -232,7 +232,7 @@ function buildReactive(cat, id) {
 function buildFCA(cat) {
   if (!cat.fca) return na('Agriculture / HTP-V: FCA exempt');
   if (cat.energy_type === 'none') return na('Unmetered tariff: no kWh base for FCA');
-  return rt([['FPPPA / FCA','As notified monthly (indicative: ₹2.30/unit)','Per kWh consumed']], ['Charge','Rate','Basis']);
+  return rt([['FPPPA / FCA','As notified quarterly(indicative: ₹2.45/unit)','Per kWh consumed']], ['Charge','Rate','Basis']);
 }
 
 function buildFPPAS(cat) {

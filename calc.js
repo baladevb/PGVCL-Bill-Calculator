@@ -24,25 +24,23 @@ function initCalc(keepEd) {
 
   // Load label
   el('load-label').textContent =
-    isDemandKVA ? 'Contract Demand (kVA)' :
-    isDemandKW  ? 'Contract Demand (kW)'  :
-    hasHP       ? 'Connected Load (HP)'   :
-    cat.fixed_type === 'per_kw_per_day' ? 'Connected Load (kW)' : 'Connected Load (kW)';
+    isDemandKVA ? 'Contract demand (kVA)' :
+    isDemandKW  ? 'Contract demand (kW)'  :
+    hasHP       ? 'Connected load (HP)'   : 'Connected load (kW)';
 
   // MD label
   const mdLabelEl = el('md-label');
-  if (mdLabelEl) mdLabelEl.textContent = isHT ? 'Max Demand Recorded (kVA)' : isDemandKW ? 'Max Demand Recorded (kW)' : 'Max Demand Recorded';
+  if (mdLabelEl) mdLabelEl.textContent = isHT ? 'Max demand recorded (kVA)' : isDemandKW ? 'Max demand recorded (kW)' : 'Max demand recorded';
 
   // kVAh label
   const kvahLabelEl = el('kvah-label');
-  if (kvahLabelEl) kvahLabelEl.textContent = isHT ? 'Apparent Energy kVAh (PF calc)' : 'Apparent Energy (kVAh)';
+  if (kvahLabelEl) kvahLabelEl.textContent = 'Apparent energy (kVAh)';
 
   // TOU off-peak label — shows hours relevant to category
   const t3LabelEl = el('t3-label');
-  if (t3LabelEl) {
-    const hours = cat.tou_offpeak_smart_hours || '11:00–17:00';
-    t3LabelEl.textContent = `Off-Peak Units T3 (${hours})`;
-  }
+  if (t3LabelEl) t3LabelEl.textContent = 'Off-peak units T3';
+  const t3Hint = el('t3-hint');
+  if (t3Hint) t3Hint.textContent = (cat.tou_offpeak_smart_hours || '11:00–17:00') + ' · concession per tariff';
 
   // Does this category have smart-meter off-peak TOU (even when tou=false for peak)?
   const hasSmartOffpeak = cat.tou_offpeak_smart && meterType !== 'normal';
@@ -187,9 +185,17 @@ function runCalc() {
   el('disp-ed').textContent    = fmt(duty);
   el('disp-grand').textContent = fmt(boardTotal + duty);
   const mb=el('mbar-total'); if (mb) mb.textContent = fmt(boardTotal + duty);
+  syncGrids();
 }
 
 // ── SEASONAL CONSUMERS (annual minimum bill) ──────────────────────────
+// Hide a field-grid when every field inside it is hidden (avoids empty gaps)
+function syncGrids() {
+  document.querySelectorAll('.grid2, .grid3').forEach(g => {
+    g.style.display = [...g.children].some(c => c.style.display !== 'none') ? '' : 'none';
+  });
+}
+
 function updateSeasonalUI(cat, on) {
   toggleRow('seasonal-card',   !!cat.seasonal);
   toggleRow('seasonal-fields', !!cat.seasonal && on);
@@ -576,6 +582,8 @@ function renderManifest(sections, boardTotal, duty, edPct, meterNote, edExempt, 
     d.textContent='⚠ '+w;
     container.appendChild(d);
   });
+  const naBox = document.createElement('div');
+  let naCount = 0;
   sections.forEach(sec => {
     const allNA  = sec.lines.every(l => l.type==='na'||l.type==='info');
     const secDiv = document.createElement('div');
@@ -587,7 +595,8 @@ function renderManifest(sections, boardTotal, duty, edPct, meterNote, edExempt, 
         <span class="sec-total ${tcls}">${allNA?'—':fmtSigned(sec.total)}</span>
       </div>
       ${sec.lines.map(l=>lineHTML(l)).join('')}`;
-    container.appendChild(secDiv);
+    if (allNA) { naBox.appendChild(secDiv); naCount++; }
+    else container.appendChild(secDiv);
   });
 
   const sub=document.createElement('div');
@@ -613,6 +622,14 @@ function renderManifest(sections, boardTotal, duty, edPct, meterNote, edExempt, 
       ${sec.lines.map(l=>lineHTML(l)).join('')}`;
     container.appendChild(d);
   });
+
+  if (naCount) {
+    const det=document.createElement('details');
+    det.className='na-group';
+    det.innerHTML=`<summary>Not applicable to this category <span class="na-count">${naCount}</span></summary>`;
+    det.appendChild(naBox);
+    container.appendChild(det);
+  }
 
   const noteDiv=document.createElement('div');
   noteDiv.className='meter-note';
@@ -664,4 +681,11 @@ function resetForm() {
   initCalc();
 }
 
-document.addEventListener('DOMContentLoaded', () => { initCalc(); if(typeof lucide!=='undefined') lucide.createIcons(); });
+function syncMobileBar() {
+  const bar = el('mbar'); if (!bar) return;
+  bar.style.display = (window.matchMedia ? window.matchMedia('(max-width: 1060px)').matches : window.innerWidth <= 1060) ? 'flex' : 'none';
+}
+window.addEventListener('resize', syncMobileBar);
+window.addEventListener('orientationchange', syncMobileBar);
+
+document.addEventListener('DOMContentLoaded', () => { syncMobileBar(); initCalc(); if(typeof lucide!=='undefined') lucide.createIcons(); });
