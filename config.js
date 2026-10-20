@@ -9,7 +9,11 @@
 //  SMART METER TOU OFF-PEAK (tou_offpeak_smart):
 //    RGP / BPL / GLP: 60p rebate for 1100-1700 hrs — smart meter only
 //    WWSP all types:  40p rebate for 1100-1800 hrs — smart meter / ToD meter
-//    NRGP / LTMD / HT: already handled under regular tou / tou_offpeak_rate
+//    NRGP / LTMD / HT: handled under regular tou / tou_offpeak_rate (see touFlags in calc.js)
+//    HTP-III: no off-peak rebate in tariff (tou_no_offpeak)
+//
+//  GREEN POWER TARIFF: optional ₹0.75/kWh add-on (Tariff Schedule clause 18) — see calc.js
+//  ROUNDING: clause 8 — loads/demand up to next 0.5; energy on whole kWh — see calc.js
 //
 //  ELECTRICITY DUTY:
 //    Residential / HT: 15% on Board Charge
@@ -41,6 +45,9 @@ const CATEGORIES = [
   ['htp_3',        'HT General',        'HTP-III — Temporary HT',              'Temporary HT supply ≥100 kVA'],
   ['htp_4',        'HT General',        'HTP-IV — Night Only HT',              'Night-only HT (22:00–06:00) ≥100 kVA'],
   ['htp_5',        'HT Agriculture',    'HTP-V — Lift Irrigation HT',          'HT agricultural lift irrigation ≥100 kVA'],
+  ['lt_ev',        'LT Commercial',     'LT EV Charging Station',              'LT supply used exclusively for EV charging'],
+  ['ht_ev',        'HT General',        'HT EV Charging Station',              'HT supply (≥100 kVA) used exclusively for EV charging'],
+  ['rly',          'HT General',        'Railway Traction',                    'Railway traction supply at 132 kV / 66 kV'],
 ];
 
 const CONFIG = {
@@ -154,6 +161,8 @@ const CONFIG = {
     pf_adj: false,
     voltage_rebate: false,
     fca: true,
+    // Tariff §4.5: annual minimum ₹1800 per kW of contracted load; off-season units 480p flat
+    seasonal: { basis:'cl', min_per_unit_year:1800, offseason_rate:4.80, unit:'kW', clause:'4.5' },
     notes: 'Peak TOU (+45p) only when CL>10kW. Off-peak discount (−60p) for smart/ToD meter. Consumer may opt LTMD instead.',
   },
 
@@ -178,6 +187,8 @@ const CONFIG = {
     pf_adj: false,
     voltage_rebate: false,
     fca: true,
+    // Tariff §5.8: annual minimum ₹2970 per kW of (annual) billing demand; off-season units 470p flat
+    seasonal: { basis:'bd', min_per_unit_year:2970, offseason_rate:4.70, unit:'kW', clause:'5.8' },
     notes: 'Billing demand = max(actual MD, 85% CD, 6kW). Reactive energy billed at ₹0.10/kVARh.',
   },
 
@@ -291,14 +302,14 @@ const CONFIG = {
     name: 'AG — HP Based (Unmetered)',
     group: 'LT Agriculture',
     ed_pct: 0,
-    fixed_type: 'hp_monthly_flat',
-    hp_monthly_rate: 200,
+    fixed_type: 'hp_yearly_flat',
+    hp_yearly_rate: 665,
     energy_type: 'none',
     tou: false,
     pf_adj: false,
     voltage_rebate: false,
     fca: false,
-    notes: 'Unmetered flat rate. Bill = HP × ₹200 × months. FCA and ED exempt.',
+    notes: 'Unmetered flat rate. Bill = HP × ₹665 per year (pro-rated by days). FCA and ED exempt.',
   },
 
   ag_metered: {
@@ -380,6 +391,8 @@ const CONFIG = {
     voltage_rebate: true,
     voltage_rebates: { '11':0.01, '66':0.015, '132':0.02 },
     fca: true,
+    // Tariff §11.11: annual minimum ₹4550 per kVA of (annual) billing demand; off-season units 430p flat
+    seasonal: { basis:'bd', min_per_unit_year:4550, offseason_rate:4.30, unit:'kVA', clause:'11.11' },
     notes: 'Billing demand = max(actual MD, 85% CD, 100 kVA). TOU and PF apply.',
   },
 
@@ -427,8 +440,8 @@ const CONFIG = {
     tou_min_cl: 0,
     tou_peak_tiered: null,
     tou_peak_rate: 0.85,
-    tou_offpeak_rate: -0.60,
-    tou_offpeak_smart_hours: '11:00–17:00',
+    // Tariff §13: HTP-III has peak surcharge only — no TOU discount (§13.4–13.8 omit it)
+    tou_no_offpeak: true,
     pf_adj: true,
     pf_rebate_above: 0.95,
     pf_neutral_low: 0.90,
@@ -486,5 +499,83 @@ const CONFIG = {
     voltage_rebates: { '11':0.01, '66':0.015, '132':0.02 },
     fca: false,
     notes: 'HT agricultural lift irrigation. ED and FCA exempt. PF and voltage rebate apply. ₹25/kVA/month flat.',
+  },
+
+  // ══════════════════════════════════════════════
+  //  EV CHARGING STATIONS & RAILWAY TRACTION
+  //  Tariff Schedule §10 (LT EV), §17 (HT EV), §16 (Railway)
+  //  ED: Gujarat EV Policy 2021 exempted EV charging stations from ED for its
+  //  policy period — default 0% here, editable (ed_editable). Verify current status.
+  // ══════════════════════════════════════════════
+
+  lt_ev: {
+    name: 'LT EV Charging Station',
+    group: 'LT Commercial',
+    ed_pct: 0,
+    ed_editable: true,
+    fixed_type: 'flat',
+    fixed_amount: 25,
+    energy_type: 'flat',
+    energy: [[Infinity,4.10]],
+    energy_prepaid: [[Infinity,3.98]],
+    tou: true,
+    tou_min_cl: 10,
+    tou_peak_rate: 0.45,
+    tou_offpeak_rate: -0.60,
+    tou_offpeak_smart_hours: '11:00–17:00',
+    pf_adj: false,
+    voltage_rebate: false,
+    fca: true,
+    notes: '₹25 per installation per month. Peak TOU (+45p) only when contract demand >10 kW. Off-peak −60p: smart meter (≤10 kW) or ToD/smart meter (>10 kW). ED default 0% (EV Policy) — editable.',
+  },
+
+  ht_ev: {
+    name: 'HT EV Charging Station',
+    group: 'HT General',
+    ed_pct: 0,
+    ed_editable: true,
+    fixed_type: 'demand_kva',
+    demand_tiers: [[Infinity,25]],
+    demand_floor_pct: 85,
+    demand_floor_abs: 100,
+    demand_excess_rate: 50,
+    energy_type: 'flat',
+    energy: [[Infinity,4.00]],
+    energy_prepaid: null,
+    tou: true,
+    tou_min_cl: 0,
+    tou_peak_tiered: null,
+    tou_peak_rate: 0.45,
+    tou_offpeak_rate: -0.60,
+    tou_offpeak_smart_hours: '11:00–17:00',
+    pf_adj: false,
+    voltage_rebate: true,
+    voltage_rebates: { '11':0.01, '66':0.015, '132':0.02 },
+    fca: true,
+    notes: 'Demand ₹25/kVA within CD, ₹50/kVA excess. Energy 400p. No PF adjustment clause in tariff §17. ED default 0% (EV Policy) — editable.',
+  },
+
+  rly: {
+    name: 'Railway Traction',
+    group: 'HT General',
+    ed_pct: 15,
+    fixed_type: 'demand_kva',
+    demand_tiers: [[Infinity,180]],
+    demand_floor_pct: 85,
+    demand_floor_abs: 100,
+    demand_excess_rate: 425,
+    energy_type: 'flat',
+    energy: [[Infinity,5.00]],
+    energy_prepaid: null,
+    tou: false,
+    pf_adj: true,
+    pf_rebate_above: 0.95,
+    pf_neutral_low: 0.90,
+    pf_penalty_1_below: 0.90,
+    pf_penalty_2_below: 0.85,
+    voltage_rebate: true,
+    voltage_rebates: { '11':0.01, '66':0.015, '132':0.02 },
+    fca: true,
+    notes: 'Demand ₹180/kVA within CD, ₹425/kVA excess (normal-rate relief for load transfer / train bunching needs documentary proof — not modelled). Energy 500p. ED rate 15% assumed — editable.',
   },
 };

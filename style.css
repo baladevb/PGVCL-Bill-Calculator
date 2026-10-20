@@ -651,6 +651,7 @@ hr.sep { border: none; height: 1px; background: var(--slate-200); margin: 0.7rem
 
 /* Cat cards — ensure they stack above the sticky sidebar visually */
 .cat-card {
+  scroll-margin-top: 0.75rem;
   background: var(--white);
   border-radius: var(--r-card);
   box-shadow: var(--shadow-card);
@@ -865,3 +866,149 @@ hr.sep { border: none; height: 1px; background: var(--slate-200); margin: 0.7rem
   .line-calc    { color: #333 !important; }
   .subtotal-box { background: #ddd !important; color: #000 !important; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   v4 — RESPONSIVE / MOBILE-FIRST OVERRIDES (desktop layout unchanged)
+   ════════════════════════════════════════════════════════════════ */
+
+/* Warnings inside the charge manifest */
+.calc-warn {
+  background: var(--amber-50);
+  border: 1px solid var(--amber-500);
+  border-left: 4px solid var(--amber-500);
+  color: #78350f;
+  border-radius: var(--r-input);
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+select:disabled, input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Sticky mobile total bar — hidden on desktop */
+.mbar { display: none; }
+
+/* Keep long words / numbers from breaking layouts */
+.line-name, .line-calc, .cat-name, .cat-desc-text { overflow-wrap: anywhere; }
+.line-val, .sec-total, .total-amount { white-space: nowrap; }
+
+/* ── TABLET & PHONE (≤1060px: one column) ─────────────────────── */
+@media (max-width: 1060px) {
+  body { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+
+  .mbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 50;
+    padding: 0.6rem max(0.9rem, env(safe-area-inset-right)) calc(0.6rem + env(safe-area-inset-bottom)) max(0.9rem, env(safe-area-inset-left));
+    background: linear-gradient(145deg, #0c1d4d 0%, #1e3a8a 60%, #1d4ed8 100%);
+    color: #fff;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .mbar-info  { display: flex; flex-direction: column; min-width: 0; }
+  .mbar-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.65; }
+  .mbar-amt   { font-family: 'JetBrains Mono', monospace; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; white-space: nowrap; }
+  .mbar-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    min-height: 44px; padding: 0 1rem;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 100px;
+    color: #fff; font-family: inherit; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .mbar-btn:active { background: rgba(255,255,255,0.28); }
+
+  /* results panel sits below the form; scroll target clears nothing fixed at top */
+  .manifest-card { scroll-margin-top: 0.5rem; }
+}
+
+/* ── PHONES (≤640px) ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  body { padding-left: max(0.55rem, env(safe-area-inset-left)); padding-right: max(0.55rem, env(safe-area-inset-right)); }
+
+  .site-header { padding: 0.9rem 0 0.6rem; margin-bottom: 0.6rem; }
+  .site-header h1 { font-size: 1.45rem; }
+  .tariff-pill { font-size: 0.52rem; letter-spacing: 0.08em; padding: 0.2rem 0.65rem; text-align: center; }
+  .site-header .sub { font-size: 0.64rem; }
+  .nav-links { gap: 0.4rem; }
+  .nav-link { min-height: 40px; padding: 0 1rem; font-size: 0.75rem; }
+
+  .grid { gap: 0.75rem; }
+  .card { padding: 0.95rem 0.85rem; }
+  .sec-head-form { font-size: 0.9rem; }
+
+  /* Inputs: 16px stops iOS zooming; 46px high for thumbs */
+  select, input[type="number"] { font-size: 16px; min-height: 46px; padding: 0.55rem 0.75rem; }
+  .fg label { font-size: 0.7rem; }
+  .field-hint { font-size: 0.7rem; }
+  .field-section-label { font-size: 0.68rem; }
+  .cat-desc { font-size: 0.72rem; }
+  .banner { font-size: 0.78rem; }
+  .banner strong { font-size: 0.84rem; }
+
+  .row2-auto { grid-template-columns: 1fr 1fr; }
+  .row3 { grid-template-columns: 1fr 1fr; }
+
+  .cb-row { grid-template-columns: 1fr; }
+  .cb-label { padding: 0.7rem 0.75rem; min-height: 48px; }
+  .cb-label input { width: 20px; height: 20px; margin-top: 0; }
+  .cb-label span  { font-size: 0.8rem; }
+  .cb-label small { font-size: 0.7rem; }
+
+  .pf-table { font-size: 0.7rem; }
+  .btn { min-height: 48px; font-size: 0.88rem; }
+
+  /* Results */
+  .total-card { padding: 1rem; }
+  .total-eyebrow { font-size: 0.64rem; }
+  .total-amount { font-size: 2.1rem; }
+  .total-chip { font-size: 0.74rem; }
+  .manifest-head { font-size: 0.78rem; }
+  .sec .sec-title { font-size: 0.76rem; }
+  .sec .sec-total { font-size: 0.92rem; }
+  .line { gap: 0.6rem; }
+  .line-name { font-size: 0.8rem; }
+  .line-calc { font-size: 0.68rem; }
+  .line-val  { font-size: 0.82rem; }
+  .subtotal-box span:first-child { font-size: 0.72rem; }
+  .meter-note { font-size: 0.7rem; }
+  .calc-warn { font-size: 0.76rem; }
+  .site-footer { font-size: 0.68rem; }
+}
+
+/* ── TARIFF DETAILS PAGE — phone/tablet ───────────────────────── */
+@media (max-width: 900px) {
+  /* category list collapses behind a tappable header */
+  .details-grid .sidebar { max-height: none; overflow: visible; }
+  .sidebar-head { cursor: pointer; display: flex; justify-content: space-between; align-items: center; min-height: 44px; font-size: 0.74rem; }
+  .sidebar-head::after { content: '▾'; font-size: 0.9rem; transition: transform 0.2s ease; }
+  .sidebar.open .sidebar-head::after { transform: rotate(180deg); }
+  #sidebar-nav { display: none; max-height: 55vh; overflow-y: auto; }
+  .sidebar.open #sidebar-nav { display: block; }
+  .sidebar-link { padding-top: 0.7rem; padding-bottom: 0.7rem; font-size: 0.82rem; }
+  .sidebar-group-label { font-size: 0.66rem; }
+}
+@media (max-width: 640px) {
+  .cat-name { font-size: 1.1rem; }
+  .cat-desc-text { font-size: 0.76rem; }
+  .tag { font-size: 0.64rem; }
+  .charge-sections { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .charge-sections table { font-size: 0.78rem; }
+  .charge-sections th, .charge-sections td { overflow-wrap: anywhere; }
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* Mobile bar never prints */
+@media print { .mbar { display: none !important; } body { padding-bottom: 0 !important; } .calc-warn { display: none !important; } }

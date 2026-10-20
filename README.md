@@ -13,7 +13,9 @@ Access the calculator online via GitHub Pages:
 - Supports LT, HT, Residential, Commercial & Agriculture
 - Based on GERC tariff (Apr 2026)
 - Detailed charge breakdown
-- TOU, PF, FCA, ED included
+- TOU, PF, FCA, FPPAS, ED included
+- LT/HT EV charging and Railway Traction categories
+- Optional Green Power Tariff, seasonal-consumer annual minimum, and tariff clause-8 rounding
 - Prepaid meter rebate option
 - Clean UI + print support
 

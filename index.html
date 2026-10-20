@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070e1d">
   <title>PGVCL Bill Calculator — FY 2026-27</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,7 +30,7 @@
       </div>
 
       <!-- Banners -->
-      <div id="warn-ag-hp"  class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>AG HP-Based — Unmetered</strong>Bill = HP × ₹200 × months. ED and FCA exempt. No energy reading needed.</div></div>
+      <div id="warn-ag-hp"  class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>AG HP-Based — Unmetered</strong>Bill = HP × ₹665 per year (pro-rated by days). ED and FCA exempt. No energy reading needed.</div></div>
       <div id="warn-tatkal" class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>AG Tatkal</strong>Energy at 80p/unit. Eligible for normal rate after 5 years.</div></div>
       <div id="warn-tmp"    class="banner banner-warn"  style="display:none"><i data-lucide="alert-triangle" style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>TMP — Temporary Supply</strong>Fixed ₹15/kW/day. Payment within 7 days. Max 6 months.</div></div>
       <div id="warn-ltmd"   class="banner banner-info"  style="display:none"><i data-lucide="info"           style="width:16px;flex-shrink:0;margin-top:1px"></i><div><strong>LTMD</strong>Enter: Contract Demand (kW), Max Demand (kW), Active Energy (kWh), Reactive Energy (kVARh).</div></div>
@@ -51,6 +52,7 @@
             <option value="ltmd">LTMD — above 40 kW (Max Demand)</option>
             <option value="glp">GLP — Street Light / Charity / Educational</option>
             <option value="tmp">TMP — Temporary LT Supply</option>
+            <option value="lt_ev">LT EV Charging Station</option>
           </optgroup>
           <optgroup label="── Water Works (LT) ──">
             <option value="wwgp">WWSP Type III — Gram / Nagar Panchayat</option>
@@ -58,7 +60,7 @@
             <option value="wwpr">WWSP Type I — Other Authority</option>
           </optgroup>
           <optgroup label="── Agriculture (LT) ──">
-            <option value="ag_hp">AG — HP Based (₹200/HP/month, unmetered)</option>
+            <option value="ag_hp">AG — HP Based (₹665/HP/year, unmetered)</option>
             <option value="ag_metered">AG — Metered (₹20/HP fixed + 60p/unit)</option>
             <option value="ag_tatkal">AG — Tatkal (₹20/HP fixed + 80p/unit)</option>
             <option value="ltp_li">LTP — Lift Irrigation (₹20/HP fixed + 80p/unit)</option>
@@ -69,6 +71,8 @@
             <option value="htp_3">HTP-III — Temporary HT</option>
             <option value="htp_4">HTP-IV — Night Only HT (22:00–06:00)</option>
             <option value="htp_5">HTP-V — HT Lift Irrigation</option>
+            <option value="ht_ev">HT EV Charging Station</option>
+            <option value="rly">Railway Traction (66 / 132 kV)</option>
           </optgroup>
         </select>
       </div>
@@ -77,7 +81,7 @@
 
       <div class="fg">
         <label>Meter Type</label>
-        <select id="meter_type" onchange="initCalc()">
+        <select id="meter_type" onchange="initCalc(true)">
           <option value="normal">Normal Meter (Post-paid — standard rates)</option>
           <option value="smart_postpaid">Smart Meter — Post-paid (same unit rates)</option>
           <option value="smart_prepaid">Smart Meter — Pre-paid (concessional rates)</option>
@@ -90,17 +94,17 @@
       <div class="row2-auto">
         <div class="fg">
           <label id="load-label">Connected Load (kW)</label>
-          <input type="number" id="cl" value="5" min="0" step="0.5" oninput="runCalc()">
+          <input type="number" inputmode="decimal" id="cl" value="5" min="0" step="0.5" oninput="runCalc()">
         </div>
         <div class="fg">
           <label>Billing Period (Days)</label>
-          <input type="number" id="days" value="30" min="1" max="92" oninput="runCalc()">
+          <input type="number" inputmode="decimal" id="days" value="30" min="1" max="92" oninput="runCalc()">
         </div>
       </div>
 
       <div class="fg demand-field" id="md-row" style="display:none">
         <label id="md-label">Max Demand Recorded (kW)</label>
-        <input type="number" id="md" value="0" min="0" step="0.5" oninput="runCalc()">
+        <input type="number" inputmode="decimal" id="md" value="0" min="0" step="0.5" oninput="runCalc()">
         <div class="field-hint">Actual maximum demand recorded by meter this billing period</div>
       </div>
 
@@ -109,18 +113,18 @@
 
       <div class="fg" id="kwh-row">
         <label id="kwh-label">Active Energy (kWh)</label>
-        <input type="number" id="kwh" value="200" min="0" oninput="runCalc()">
+        <input type="number" inputmode="decimal" id="kwh" value="200" min="0" oninput="runCalc()">
       </div>
 
       <div class="fg ht-field" id="kvah-row" style="display:none">
         <label id="kvah-label">Apparent Energy kVAh (PF calc)</label>
-        <input type="number" id="kvah" value="0" min="0" oninput="runCalc()">
+        <input type="number" inputmode="decimal" id="kvah" value="0" min="0" oninput="runCalc()">
         <div class="field-hint">From meter — PF = kWh ÷ kVAh</div>
       </div>
 
       <div class="fg ltmd-field" id="kvarh-row" style="display:none">
         <label>Reactive Energy (kVARh)</label>
-        <input type="number" id="kvarh" value="0" min="0" oninput="runCalc()">
+        <input type="number" inputmode="decimal" id="kvarh" value="0" min="0" oninput="runCalc()">
         <div class="field-hint">Charged at ₹0.10/kVARh for LTMD consumers</div>
       </div>
 
@@ -130,11 +134,11 @@
       <div id="tou-row" style="display:none">
         <div id="t1-field" class="fg">
           <label>Peak Units T1 (07:00–11:00 &amp; 18:00–22:00 hrs)</label>
-          <input type="number" id="t1" value="0" min="0" oninput="runCalc()">
+          <input type="number" inputmode="decimal" id="t1" value="0" min="0" oninput="runCalc()">
         </div>
-        <div class="fg">
+        <div id="t3-field" class="fg">
           <label id="t3-label">Off-Peak Units T3 (11:00–17:00 hrs)</label>
-          <input type="number" id="t3" value="0" min="0" oninput="runCalc()">
+          <input type="number" inputmode="decimal" id="t3" value="0" min="0" oninput="runCalc()">
           <div class="field-hint">Off-peak discount applied per tariff order</div>
         </div>
       </div>
@@ -153,11 +157,71 @@
       <div class="row2">
         <div class="fg">
           <label>Electricity Duty Rate (%)</label>
-          <input type="number" id="ed_rate" value="15" min="0" max="100" step="0.5" oninput="runCalc()">
+          <input type="number" inputmode="decimal" id="ed_rate" value="15" min="0" max="100" step="0.5" oninput="runCalc()">
         </div>
         <div class="fg">
           <label>FPPPA / FCA Rate (₹/kWh)</label>
-          <input type="number" id="fca_rate" value="2.30" min="0" step="0.01" oninput="runCalc()">
+          <input type="number" inputmode="decimal" id="fca_rate" value="2.30" step="0.01" oninput="runCalc()">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label>FPPAS Rate (%)</label>
+          <input type="number" inputmode="decimal" id="fppas_rate" value="3.99" max="100" step="0.01" oninput="runCalc()">
+        </div>
+        <div class="fg"></div>
+      </div>
+
+      <div class="cb-row">
+        <label class="cb-label" for="round_cl">
+          <input type="checkbox" id="round_cl" checked onchange="runCalc()">
+          <span>Apply tariff rounding (clause 8)<small>Load / demand up to next 0.5; energy on whole kWh</small></span>
+        </label>
+      </div>
+
+      <div class="cb-row">
+        <label class="cb-label" for="green_on">
+          <input type="checkbox" id="green_on" onchange="runCalc()">
+          <span>Green Power Tariff (optional)<small>Renewable-energy opt-in, charged on all kWh</small></span>
+        </label>
+      </div>
+      <div class="fg" id="green-rate-row" style="display:none">
+        <label>Green Power Rate (₹/kWh)</label>
+        <input type="number" inputmode="decimal" id="green_rate" value="0.75" min="0" step="0.01" oninput="runCalc()">
+      </div>
+
+      <div id="seasonal-card" style="display:none">
+        <hr class="sep">
+        <div class="field-section-label">Seasonal Consumer (Annual Minimum Bill)</div>
+        <div class="cb-row">
+          <label class="cb-label" for="seasonal_on">
+            <input type="checkbox" id="seasonal_on" onchange="runCalc()">
+            <span>Billed on annual minimum basis<small id="seasonal-hint"></small></span>
+          </label>
+        </div>
+        <div id="seasonal-fields" style="display:none">
+          <div class="cb-row">
+            <label class="cb-label" for="offseason_month">
+              <input type="checkbox" id="offseason_month" onchange="runCalc()">
+              <span>This billing month is in the declared off-season<small>Flat off-season rate on all units; no fixed/demand charge</small></span>
+            </label>
+          </div>
+          <div class="fg">
+            <label>Fixed/Demand + Energy billed in earlier season months (₹)</label>
+            <input type="number" inputmode="decimal" id="sea_paid" value="0" min="0" oninput="runCalc()">
+            <div class="field-hint">This calendar year, season months only — excl. FCA, FPPAS, ED and off-season bills. This month is added automatically.</div>
+          </div>
+          <div class="row2" id="sea-bd-fields">
+            <div class="fg">
+              <label>Highest MD in year</label>
+              <input type="number" inputmode="decimal" id="sea_maxmd" value="0" min="0" step="0.5" oninput="runCalc()">
+            </div>
+            <div class="fg">
+              <label>Average CD in year</label>
+              <input type="number" inputmode="decimal" id="sea_avgcd" value="0" min="0" step="0.5" oninput="runCalc()">
+              <div class="field-hint">0 = use Contract Demand above</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -173,13 +237,13 @@
         <table class="pf-table">
           <thead><tr><th>Average PF (kWh ÷ kVAh)</th><th>Adjustment on Energy Charges</th></tr></thead>
           <tbody>
-            <tr><td>&gt; 0.95</td><td class="rebate">Rebate: −0.5% per 0.01 above 0.95 (max −2.5%)</td></tr>
+            <tr><td>&gt; 0.95</td><td class="rebate">Rebate: −0.5% per 1% (or part) above 95% (max −2.5%)</td></tr>
             <tr><td>0.90 – 0.95</td><td class="neutral">No adjustment (neutral band)</td></tr>
-            <tr><td>0.85 – 0.899</td><td class="penalty">Penalty: +1.0% per 0.01 below 0.90</td></tr>
-            <tr><td>&lt; 0.85</td><td class="penalty">Penalty: +5% (0.85–0.90) + 2% per 0.01 below 0.85</td></tr>
+            <tr><td>0.85 – 0.899</td><td class="penalty">Penalty: +1% per 1% (or part) below 90%</td></tr>
+            <tr><td>&lt; 0.85</td><td class="penalty">Penalty: +5% (down to 85%) + 2% per 1% (or part) below 85%</td></tr>
           </tbody>
         </table>
-        <p style="font-size:0.59rem;color:var(--slate-500);margin-top:0.4rem">Average PF = kWh ÷ kVAh. Enter kVAh above to activate. If kVAh is 0, PF assumed = 1.0.</p>
+        <p style="font-size:0.59rem;color:var(--slate-500);margin-top:0.4rem">Average PF = kWh ÷ kVAh. Enter kVAh above to activate. If kVAh is 0, no PF adjustment is applied.</p>
       </div>
 
       <div class="btn-row">
@@ -198,11 +262,22 @@
         </div>
         <div class="tariff-line">GERC Tariff Order w.e.f. 01-April-2026 &middot; FY 2026-27</div>
       </div>
-      <div class="manifest-card">
+      <div class="manifest-card" id="manifest-card">
         <div class="manifest-head"><i data-lucide="file-text" style="width:13px"></i> Charge Manifest</div>
         <div id="manifest-list"></div>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile-only sticky total bar -->
+  <div class="mbar" id="mbar">
+    <div class="mbar-info">
+      <span class="mbar-label">Total bill (incl. ED)</span>
+      <span class="mbar-amt">₹<span id="mbar-total">0.00</span></span>
+    </div>
+    <button type="button" class="mbar-btn" onclick="toggleMobileView()" id="mbar-btn">
+      <i data-lucide="file-text" style="width:15px"></i> <span id="mbar-btn-txt">Breakdown</span>
+    </button>
   </div>
 
   <footer class="site-footer">

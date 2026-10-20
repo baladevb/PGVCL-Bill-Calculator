@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PGVCL Tariff Details — FY 2026-27</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -77,8 +77,8 @@ function buildFixed(cat) {
       return na('No fixed charge for WWSP Type III (GP areas)');
     case 'per_hp':
       return rt([['Per HP of connected load', badge('₹'+cat.fixed_rate_per_hp+' / HP / month','blue')]]);
-    case 'hp_monthly_flat':
-      return rt([['Per HP (entire bill basis)', badge('₹'+cat.hp_monthly_rate+' / HP / month','blue')]]) + note('Entire bill = HP × ₹'+cat.hp_monthly_rate+' × months. No separate energy component.');
+    case 'hp_yearly_flat':
+      return rt([['Per HP (entire bill basis)', badge('₹'+cat.hp_yearly_rate+' / HP / year','blue')]]) + note('Entire bill = HP × ₹'+cat.hp_yearly_rate+' per year (pro-rated by days). No separate energy component.');
     case 'per_kw_per_day':
       return rt([['Per kW per day', badge('₹'+cat.fixed_rate_per_kw_day+' / kW / day','blue')]]);
     case 'tiered_kw': {
@@ -193,6 +193,8 @@ function buildTOU(cat) {
     html += rt([['Peak period (07:00–11:00 & 18:00–22:00)', badge('+₹'+cat.tou_peak_rate.toFixed(2)+'/unit surcharge','red')]]);
   }
 
+  if (cat.tou_no_offpeak) html += note('HTP-III has no Time-of-Use discount in the tariff schedule (§13) — only the peak surcharge applies.');
+
   // Off-peak discount
   const opRate = cat.tou_offpeak_rate || cat.tou_offpeak_smart_rate;
   if (opRate) {
@@ -233,7 +235,25 @@ function buildFCA(cat) {
   return rt([['FPPPA / FCA','As notified monthly (indicative: ₹2.30/unit)','Per kWh consumed']], ['Charge','Rate','Basis']);
 }
 
+function buildFPPAS(cat) {
+  if (!cat.fca) return na('Agriculture / HTP-V: FPPAS exempt');
+  if (cat.energy_type === 'none') return na('Unmetered tariff: no FPPAS');
+  return rt([['FPPAS','3.99% (editable in calculator)','On Fixed + Energy + FCA (excess MD penalty excluded); ED also levied on it']], ['Charge','Rate','Basis']);
+}
+
+function buildSeasonal(cat) {
+  if (!cat.seasonal) return na('Seasonal-consumer annual minimum applies to NRGP, LTMD and HTP-I only');
+  const z = cat.seasonal;
+  const basis = z.basis==='cl' ? 'Contracted / sanctioned load' : 'Annual billing demand = max(highest MD in year, 85% of average CD, ' + cat.demand_floor_abs + ' ' + z.unit + ')';
+  return rt([
+    ['Annual minimum (Fixed/Demand + Energy)', badge('₹'+z.min_per_unit_year+' / '+z.unit+' / year','blue')],
+    ['Basis', basis],
+    ['Off-season units (flat rate)', badge((z.offseason_rate*100).toFixed(0)+'p = ₹'+z.offseason_rate.toFixed(2)+'/unit','green')]
+  ], ['Item','Value']) + note('Opt-in in writing 1 month before the billing period; off-season = full calendar months, at least 3 per year. Off-season bills do not count toward the minimum; shortfall is payable at year-end. (Tariff §'+z.clause+')');
+}
+
 function buildED(cat) {
+  if (cat.ed_pct === 0 && cat.ed_editable) return na('Default 0% — Gujarat EV Policy 2021 exempted EV charging stations from ED for its policy period. Rate is editable in the calculator; verify current status.');
   if (cat.ed_pct === 0) return na('Agriculture categories are exempt from Electricity Duty');
   return rt([[badge(cat.ed_pct+'%','blue'), 'Total Board Charge (all components except ED itself)']], ['ED Rate','Applied On']);
 }
@@ -262,7 +282,7 @@ function buildCard(id, cat) {
   const desc   = catRow?.[3] || '';
   const bg     = headerBg[group] || 'linear-gradient(135deg,#1e3a8a,#2563eb)';
   const tags   = (tagMap[group]||[]).join('');
-  const edTag  = cat.ed_pct===0 ? '<span class="tag tag-noed">ED Exempt</span>' : `<span class="tag tag-ed">ED ${cat.ed_pct}%</span>`;
+  const edTag  = (cat.ed_pct===0 && !cat.ed_editable) ? '<span class="tag tag-noed">ED Exempt</span>' : `<span class="tag tag-ed">ED ${cat.ed_pct}%</span>`;
   const fcaTag = cat.fca ? '<span class="tag tag-fca">FCA Applicable</span>' : '<span class="tag tag-nofca">FCA Exempt</span>';
 
   const isWW = ['wwgp','wwlt2','wwpr'].includes(id);
@@ -283,6 +303,8 @@ function buildCard(id, cat) {
       ${section('trending-down','cs-icon-green','Voltage Rebate', buildVoltage(cat))}
       ${section('clock','cs-icon-green','Time of Use (TOU)', buildTOU({...cat, id}))}
       ${section('fuel','cs-icon-amber','FPPPA / FCA', buildFCA(cat))}
+      ${section('fuel','cs-icon-amber','FPPAS', buildFPPAS(cat))}
+      ${cat.seasonal ? section('calendar','cs-icon-amber','Seasonal Consumer — Annual Minimum', buildSeasonal(cat)) : ''}
       ${section('percent','cs-icon-red','Electricity Duty (ED)', buildED(cat))}
       ${cat.notes ? `<div style="padding:0.5rem 1.1rem 0.7rem">${note(cat.notes)}</div>` : ''}
     </div>
@@ -332,6 +354,11 @@ function buildPage() {
     });
   }, { rootMargin: '-15% 0px -75% 0px' });
   document.querySelectorAll('.cat-card[id]').forEach(el => observer.observe(el));
+
+  // Mobile: collapsible category list
+  const sb = document.querySelector('.sidebar');
+  document.querySelector('.sidebar-head').addEventListener('click', () => sb.classList.toggle('open'));
+  document.querySelectorAll('.sidebar-link').forEach(a => a.addEventListener('click', () => sb.classList.remove('open')));
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
